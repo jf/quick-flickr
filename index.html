@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<style type='text/css'>
+	body { background-color: black; }
+	form { background-color: white;
+		padding: 10px;
+	}
+	input#tags { padding-right: 16px; }
+	input#tags.searching {
+		background-image: url( 'img/ajax-loader.gif' );
+		background-position: right center;
+		background-repeat: no-repeat;
+	}
+	button { display: none; }
+
+	div#nav { display: none; }
+	div#nav span.nav { color: #0000ff; cursor: pointer; }
+	div#nav span.nav:hover { text-decoration: underline; }
+
+	div#no-results { display: none; }
+
+	div#thumbs a {
+		display: inline-block;
+		margin: 5px; margin-top: 10px;
+		padding: 5px;
+		border: 2px solid #333;
+	}
+	div#thumbs a img { vertical-align: top; }
+</style>
+
+
+<script src='https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js'></script>
+
+
+<script>
+	var API_KEY = '<FILL_THIS_IN!!!>';
+
+	$( function() {
+
+
+		$( '#search' ).submit( function() {
+			search();
+			return false;
+		});
+
+		$( 'span.nav' ).click( function() {
+			search( $( this ).data( 'num' ) );
+		});
+
+
+		function noResults() {
+			$( '#no-results' ).show();
+			$( '#thumbs' ).html( '' );
+		}
+
+		function search( currentPage ) {
+			var input = $( '#tags' );
+			var tags = $.trim( input.val() );
+
+			if ( tags == '' ) {
+				input.val( '' );
+				return false;
+			}
+
+			// ref: http://www.flickr.com/services/api/explore/flickr.photos.search
+			// example url - http://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=<KEY>&tags=<SEARCH>&format=json&nojsoncallback=1
+			var searchForm = $( '#search' );
+			var navDiv = $( '#nav' ).hide();
+			var noResults = $( '#no-results' ).hide();
+
+			currentPage = currentPage == undefined ? 1 : currentPage;
+
+			$.get( 'http://api.flickr.com/services/rest/?method=flickr.photos.search&per_page=10&page=' + currentPage + '&format=json&nojsoncallback=1&api_key=' + API_KEY, searchForm.serialize(), function( response ) {
+				input.removeClass( 'searching' );
+
+				if ( response.stat == 'fail' )
+					alert( response.message );
+				else {
+					var pages = response.photos.pages;
+
+					if ( pages == 0 ) {
+						noResults();
+						return;
+					}
+
+
+					navDiv.children( 'span#current' ).html( currentPage );
+					navDiv.children( 'span#count' ).html( pages );
+
+					var nextSpan = navDiv.children( 'span.nav:eq(1)' ).data( 'num', currentPage + 1 );
+					if ( currentPage >= pages )
+						nextSpan.hide();
+					else
+						nextSpan.show();
+
+					var prevSpan = navDiv.children( 'span.nav:eq(0)' ).data( 'num', currentPage - 1 );
+					if ( currentPage == 1 )
+						prevSpan.hide();
+					else
+						prevSpan.show();
+
+					navDiv.show();
+
+
+					// ref: http://www.flickr.com/services/api/misc.urls.html
+					var thumbs = $( '#thumbs' ).html( '' );
+					$.each( response.photos.photo, function(i, photo) {
+						var aUrl =
+							'<a target="_blank" title="Open in new window" href="http://www.flickr.com/photos/' + photo.owner + '/' + photo.id + '">' +
+								'<img src="' + 'http://farm' + photo.farm + '.staticflickr.com/' + photo.server + '/' + photo.id + '_' + photo.secret + '_t.jpg' + '" />' +
+							'</a>';
+						thumbs.append( $( aUrl ) );
+					});
+				}
+			}, 'json' );
+			input.addClass( 'searching' );
+		}
+
+
+	});
+</script>
+</head>
+
+
+
+<body>
+
+
+
+<form id='search'>
+Enter keyword: <input id='tags' type='text' name='tags'></input>
+<button type='submit'>Search!</button>
+
+<br />
+
+<div id='nav'>
+	<span class='nav'>&lt;</span>
+	<span id='current'>1</span> of <span id='count'></span>
+	<span class='nav'>&gt;</span>
+</div>
+<div id='no-results'>No results!</div>
+
+</form>
+
+
+<div id='thumbs'>
+</div>
+
+
+
+</body>
+</html>
